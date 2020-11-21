@@ -1,0 +1,17 @@
+Package: PhotoBioDynamics
+Title: Simulate global photosynthetic dynamics
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Jannes",
+           family = "Breier",
+           role = c("aut", "cre"),
+           email = "jannes.breier@gmail.com",
+           comment = c(ORCID = "0000-0002-9055-6904"))
+Description: Simulate global photosynthetic dynamics by using directly
+    available remote sensing products. The approach is based on the work
+    of Haxeltine and Prentice, 1996 (https://doi.org/10.1029/96GB02344).
+License: `use_mit_license()`
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
