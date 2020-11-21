@@ -1,17 +1,8 @@
-
-# packages 
-# require("raster")
-# require("ncdf4")
-# require("lubridate")
-# require("doParallel")
-# require("tidyverse")
-# require("rvest")
-# # require("stringr")
-
-# FUN ####
+# inner FUN ####
 
 .combineNCData = function(path, fn_const, y, var, dates) {
-  out = read.ncdf.var(path = path, 
+  source("./R/ncdfFun.R")
+  out = .read.ncdf.var(path = path, 
                       fn = paste0(fn_const, 
                                   dates[y],
                                   ".nc"),
@@ -19,7 +10,7 @@
 }
 
 # abind along third dimension
-acomb = function(...) abind::abind(..., along = 3)
+.acomb = function(...) abind::abind(..., along = 3)
 
 
 .downloadIrradianceNCs = function(ff, url, nodes, path.originaldata) {
@@ -106,16 +97,17 @@ acomb = function(...) abind::abind(..., along = 3)
 }
 
 # download and process global temperature data ####
-.wranglingTemperatureData = function(years, path.originaldata) {
+.getTemperatureData = function(years, path.originaldata) {
   
   url_temp = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.GHCN_CAMS/.gridded/.deg0p5/data.nc"
   download.file(url = url_temp,
                 destfile = paste0(path.originaldata, "/orig/air.mon.mean2.nc"),
-                mode="wb")
-  temp = read.ncdf(paste0(path.originaldata, "/orig/"),"air.mon.mean2.nc")
+                mode="wb") %>% 
+    invisible()
+  temp = .read.ncdf(paste0(path.originaldata, "/orig/"),"air.mon.mean2.nc")
   
   # read and assign time metadata
-  time_dim = get.ncdf.dimnames(paste0(path.originaldata,"/orig/"),
+  time_dim = .get.ncdf.dimnames(paste0(path.originaldata,"/orig/"),
                                "air.mon.mean2.nc",
                                which_dim = "T")[[1]]
   dimnames(temp)[[3]] = as.character(time_dim)
@@ -131,12 +123,15 @@ acomb = function(...) abind::abind(..., along = 3)
     brick(., nl = dim(temp)[3]) %>% 
     setValues(., values = temp)
   
-  saveRDS(object=temp_ras, file="./data/processed_grid/temp3.Rds")
+  if (!dir.exists("./data/input/")) {
+    dir.create(path = "./data/input/", recursive = TRUE)
+  }
+  saveRDS(object=temp_ras, file="./data/input/temp_ras.Rds")
 }
 
 
 # download and process CO2 data from Mauna Loa (good representativity) #####
-.wranglingCO2Data = function(years, path.originaldata) {
+.getCO2Data = function(years, path.originaldata) {
   
   url_co2 = 'ftp://aftp.cmdl.noaa.gov/products/trends/co2/co2_mm_mlo.txt'
   co2_dat = read.table(file = url_co2,
@@ -154,15 +149,19 @@ acomb = function(...) abind::abind(..., along = 3)
                        trend = co2_dat$trend) %>% 
     filter(year >= min(years) & year <= max(years))
   
-  saveRDS(object=co2_tab, file = "./data/processed_grid/CO2_tab3.Rds")
+  if (!dir.exists("./data/input/")) {
+    dir.create(path = "./data/input/", recursive = TRUE)
+  }
+
+  saveRDS(object=co2_tab, file = "./data/input/CO2_tab.Rds")
 }
 
 
 # download and process Leaf Area Index (LAI) & Fraction of Absorbed PAR (FPAR) ####
-.wranglingLAIFPARData = function(years, cluster, path.originaldata) {
+.getLAIFPARData = function(years, cluster, path.originaldata) {
   
-  if (file.exists("./data/processed_grid/CO2_tab3.Rds")) {
-    co2_tab =   readRDS(file = "./data/processed_grid/CO2_tab3.Rds")
+  if (file.exists("./data/input/CO2_tab.Rds")) {
+    co2_tab =   readRDS(file = "./data/input/CO2_tab.Rds")
 
   } else {
     stop("Please run photodynamics::.wranglingCO2Data() first.")
@@ -185,8 +184,8 @@ acomb = function(...) abind::abind(..., along = 3)
   
   
   # parallel foreach with multidim array returning
-  lai_ts = foreach::foreach(y = 1:length(dates_int), 
-                            .combine = 'acomb', 
+  lai_ts = foreach::foreach(y = 1:length(dates_to_extract), 
+                            .combine = '.acomb', 
                             .multicombine = TRUE,
                             .export=c(# "dates_to_extract, path.originaldata",
                               ".combineNCData")
@@ -204,17 +203,21 @@ acomb = function(...) abind::abind(..., along = 3)
   lai_ts[lai_ts == 255] = 0
   
   
-  lai_ras = brick(temp_ras, nl=dim(lai_ts)[3]) %>% 
+  lai_ras = raster(res=0.5, crs = crs("+init=epsg:4326")) %>% 
+    brick(., nl=dim(lai_ts)[3]) %>% 
     setValues(., lai_ts) %>% 
     # mean over 5 years to get rid of outliers and gaps (cells with no data)
     stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,na.rm = TRUE)
   
-  saveRDS(object=lai_1985_ras, file="./data/processed_grid/lai_3.Rds")
+  if (!dir.exists("./data/input/")) {
+    dir.create(path = "./data/input/", recursive = TRUE)
+  }
+  saveRDS(object=lai_ras, file="./data/input/lai_ras.Rds")
   
   
   # parallel foreach with multidim array returning
   fpar_ts = foreach::foreach(y = 1:length(dates_to_extract), 
-                             .combine = 'acomb', 
+                             .combine = '.acomb', 
                              .multicombine = TRUE,
                              .export=c(# "dates_to_extract, path.originaldata",
                                ".combineNCData")
@@ -231,18 +234,23 @@ acomb = function(...) abind::abind(..., along = 3)
   fpar_ts = aperm(fpar_ts, c(2,1,3))
   fpar_ts[360:1,,] = fpar_ts
   fpar_ts[fpar_ts == 255] = 0
-  fpar_ras = brick(temp_ras, nl=dim(fpar_ts)[3]) %>% 
+  fpar_ras = raster(res=0.5, crs = crs("+init=epsg:4326")) %>% 
+    brick(., nl=dim(fpar_ts)[3]) %>% 
     setValues(., fpar_ts) %>% 
     # mean over 5 years to get rid of outliers and gaps (cells with no data)
     stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,na.rm = TRUE)
   
-  saveRDS(object=fpar_1985_ras, file="./data/processed_grid/fpar_3.Rds")
+  if (!dir.exists("./data/input/")) {
+    dir.create(path = "./data/input/", recursive = TRUE)
+  }
+  
+  saveRDS(object=fpar_ras, file="./data/input/fpar_ras.Rds")
   
 }
 
 
 # download and process Photosynthetic Active Radiation (PAR) ####
-.wranglingPARData = function(years, cluster, path.originaldata) {
+.getPARData = function(paryears, cluster, path.originaldata) {
   
   par_url = "https://opendap.larc.nasa.gov/opendap/SRB/LPSA/SRB_REL3.0_LPSA_MONTHLY_NC/rel3.0/"
   page = xml2::read_html(paste0(par_url, "contents.html"))
@@ -255,7 +263,7 @@ acomb = function(...) abind::abind(..., along = 3)
   date_format = "([1-2][0-9]{3})"
   par_years_nodes = stringr::str_extract(data_nodes,date_format) %>% 
     as.integer() %>% 
-    match(par_years,.)
+    match(paryears,.)
   
   nodes_use = data_nodes[par_years_nodes]
   
@@ -285,7 +293,7 @@ acomb = function(...) abind::abind(..., along = 3)
   
   # parallel foreach with multidim array returning
   par_ts = foreach::foreach(y = 1:length(dates_to_extract), 
-                            .combine = 'acomb', 
+                            .combine = '.acomb', 
                             .multicombine = TRUE,
                             .export=c(#"path.originaldata, dates_to_extract",
                               ".combineNCData")
@@ -301,24 +309,36 @@ acomb = function(...) abind::abind(..., along = 3)
   par_ts = aperm(par_ts,c(2,1,3)) %>% 
     .[180:1,c(181:360,1:180),]
   
-  par_ras = raster(res=c(1,1), crs=crs(temp_ras)) %>% 
+  if (file.exists("./data/input/lai_ras.Rds")) {
+    lai_ras =   readRDS(file = "./data/input/lai_ras.Rds")
+    
+  } else {
+    stop("Please run photodynamics::.wranglingLAIFPARData() first.")
+  }
+  
+  par_ras = raster(res=c(1,1), crs=crs(lai_ras)) %>%
     brick(., nl=dim(par_ts)[3]) %>% 
     setValues(., values = par_ts) %>% 
     disaggregate(., fact = 2) %>%
     stackApply(.,indices = rep(1:12, times = dim(par_ts)[3]/12), 
                fun = mean, 
                na.rm = TRUE) %>% 
-    mask(., mask = temp_ras[[1]])
+    mask(., mask = lai_ras[[1]])
   
-  saveRDS(object=par_ras, file="./data/processed_grid/par_3.Rds")
+  if (!dir.exists("./data/input/")) {
+    dir.create(path = "./data/input/", recursive = TRUE)
+  }
+  
+  saveRDS(object=par_ras, file="./data/input/par_ras.Rds")
 }
 
 
-#' Climate data wrangler 
+#' Get input data 
 #'
-#' Download and process required climate data that is open access and currently
-#' (year 2020) available.
-#' Processed data is written to the package's data folder.
+#' Download and process required input data that is open access and currently
+#' (year 2020) available. 
+#' This may take a while, depending on your Wifi.
+#' Processed data is written to the package's data folder ('./data/input').
 #'
 #' @param year integer. Define a reference year for recycled data (fpar/lai)
 #'    end for the time series of outputs to be written. 
@@ -326,17 +346,19 @@ acomb = function(...) abind::abind(..., along = 3)
 #' @param delete.originaldata logical. Delete the original/raw data that could
 #'    likely comprises a large amount of memory. Defaults to `TRUE`
 #'
-#' @return None
+#' @return None. Optional raw output is written to 
+#'    `rappdirs::user_data_dir("PhotoBioDynamics")`, processed output is stored
+#'    in the package `./data` folder.
 #'
 #' @examples \dontrun{
 #'
-#'  wranglingClimateData(year = 2000)
+#'  getInputData(year = 2000)
 #' }
 #' 
 #' @export
 #' 
 
-wranglingClimateData = function(year, delete.originaldata = TRUE){
+getInputData = function(year, delete.originaldata = TRUE){
 
 
   # calc specific ranges for each dataset 
@@ -344,7 +366,7 @@ wranglingClimateData = function(year, delete.originaldata = TRUE){
   fpar_lai_years = (year-4):year
   par_years = 1984:2007
 
-  path_originaldata = user_data_dir("SBD") %>% 
+  path_originaldata = user_data_dir("PhotoBioDynamics") %>% 
     gsub("\\\\", "/", .)
 
   if (!dir.exists(paste0(path_originaldata, "/orig"))) {
@@ -352,7 +374,7 @@ wranglingClimateData = function(year, delete.originaldata = TRUE){
   }
   
   # detect cores for parallel backend
-  cores = detectCores()
+  cores = parallel::detectCores()
   
   # start cluster backend for parallelization
   cl = parallel::makeCluster(cores, outfile = "")
@@ -360,17 +382,17 @@ wranglingClimateData = function(year, delete.originaldata = TRUE){
   
   # read and process data
   
-  .wranglingTemperatureData(years = time_range, 
+  .getTemperatureData(years = time_range, 
                             path.originaldata = path_originaldata)  
   
-  .wranglingCO2Data(years = time_range,
+  .getCO2Data(years = time_range,
                             path.originaldata = path_originaldata)  
   
-  .wranglingLAIFPARData(years = fpar_lai_years, 
+  .getLAIFPARData(years = fpar_lai_years, 
                         cluster = cl,
                         path.originaldata = path_originaldata)  
   
-  .wranglingPARData(years = time_range, 
+  .getPARData(paryears = par_years, 
                     cluster = cl, 
                     path.originaldata = path_originaldata)  
   
@@ -378,7 +400,7 @@ wranglingClimateData = function(year, delete.originaldata = TRUE){
   # close parallel cluster backend
   parallel::stopCluster(cl)
   
-  if(delete.originaldata) unlink(paste0(path.originaldata, "/orig"))
+  if(delete.originaldata) unlink(paste0(path_originaldata, "/orig"))
     
 }
 
