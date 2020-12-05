@@ -242,19 +242,19 @@ GPP_annual <-
           fill=NA,
           alpha = 0.7,
           color = "grey50", 
-          size = 0.005) +
+          size = 0.5) +
    
   geom_sf(data=grat_poly_60s, 
           aes(geometry = geometry),
           fill=NA,
           color = "grey50", 
-          size = 0.002) +
+          size = 0.5) +
 
   geom_sf(data=bb_poly, 
           aes(geometry = geometry),
           fill=NA,
           color = "grey50", 
-          size = 0.005) +
+          size = 0.5) +
 
   theme_void() +
   theme(plot.title = element_text(family = "Roboto Mono", hjust=0.5,
@@ -276,7 +276,7 @@ biome_sf <-
          aes(geometry = geometry,
              fill=factor(BIOME)),
          color = "grey20", 
-         size = 0.005)
+         size = 0.5)
 
 
 GPP_biomes <-
@@ -306,18 +306,18 @@ GPP_biomes <-
           fill = NA,
           alpha = 0.7,
           color = "grey50", 
-          size = 0.005) +
+          size = 0.5) +
   geom_sf(data=grat_poly, 
           aes(geometry = geometry),
           fill=NA,
           color = "grey50", 
-          size = 0.002) +
+          size = 0.5) +
 
   geom_sf(data=bb_poly, 
           aes(geometry = geometry),
           fill=NA,
           color = "grey50", 
-          size = 0.005) +
+          size = 0.5) +
   geom_curve(
     data = tibble(
       x = c(-14065655),
@@ -361,7 +361,6 @@ GPP_biomes <-
                               title.hjust = 0.5,
                               title.vjust = 2,
                               label.position = "bottom"))
-
 
 ```
 
@@ -552,7 +551,9 @@ cowplot::ggdraw(GPP_biomes) +
 ggsave(here::here("PhotoBioDynamics.pdf"),
        width = 21, height = 29.7, device = cairo_pdf)
 
-
+pdftools::pdf_convert(here::here("PhotoBioDynamics.pdf"),
+                      format = "png", dpi = 200,
+                      antialias = T)
 ```
 
 

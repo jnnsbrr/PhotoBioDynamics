@@ -302,11 +302,13 @@
     .combineNCData(path = paste0(path.originaldata, "/orig/irradiance/"),
                    fn_const = "irradiance_sw_",
                    y = y,
-                   var = "sw_sfc_net",
+                   var = "sw_sfc_dn",
                    dates = dates_to_extract)
   }
   
-  par_ts = aperm(par_ts,c(2,1,3)) %>% 
+  # calculate photosynthetic active radiation
+  par_ts <- (0.5/0.27)*(par_ts*0.0864) %>% # /24/60/60*10^6*0.22 # to par mol/m^2/day from W/m^2/day
+    aperm(.,c(2,1,3)) %>% 
     .[180:1,c(181:360,1:180),]
   
   if (file.exists("./data/input/lai_ras.Rds")) {
@@ -366,7 +368,7 @@ getInputData = function(year, delete.originaldata = TRUE){
   fpar_lai_years = (year-4):year
   par_years = 1984:2007
 
-  path_originaldata = user_data_dir("PhotoBioDynamics") %>% 
+  path_originaldata = rappdirs::user_data_dir("PhotoBioDynamics") %>% 
     gsub("\\\\", "/", .)
 
   if (!dir.exists(paste0(path_originaldata, "/orig"))) {

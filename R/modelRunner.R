@@ -23,6 +23,8 @@
 #'    "GLOBAL_TS" and/or a summed time series for each of 14 biomes ("BIOME_TS).
 #'
 #' @return None
+#' 
+#' @importFrom foreach %dopar%
 #'
 #' @examples \dontrun{
 #'
@@ -33,7 +35,7 @@
 #' 
 
 modelRunner = function(path, 
-                      outvar = c("GPP", "NPP", "NEP"),
+                      outvar = c("GPP", "NPP"),
                       format = c("GLOBAL_TS", "BIOME_TS","GRID")) {
   
   # pb <- txtProgressBar(style = 3)
@@ -43,11 +45,11 @@ modelRunner = function(path,
   
   # extract array for model performance and simple dim binding   
   # temperature time series raster/array
-  temp_ras = readRDS(file = "./data/input/temp_ras.Rds")-273.15#in °C
+  temp_ras = readRDS(file = "./data/input/temp_ras.Rds")#-273.15#in °C
   temp = raster::as.array(temp_ras)
   
   # radiation time series raster -> array
-  par = readRDS(file = "./data/input/par_ras.Rds") %>% 
+  par = readRDS(file = "./data/processed_grid/par_mean1985-2010.Rds") %>% 
     raster::as.array(.)
   
   # fraction of absorbed radiation raster -> array
@@ -115,8 +117,7 @@ modelRunner = function(path,
     # calculate area of grid cells using raster package functionality
     pp_area = raster::area(x = temp_ras) %>% 
       raster::as.array(.) %>% 
-      "*"(1e-9) %>% 
-      "*"(30.47917)
+      "*"(1e-9) 
     pp_area = sweep(x = pp,
                     MARGIN = 1, 
                     STATS = pp_area, 
@@ -152,8 +153,7 @@ modelRunner = function(path,
       # calculate area of grid cells using raster package functionality
       pp_area = raster::area(x = temp_ras) %>% 
         raster::as.array(.) %>% 
-        "*"(1e-9) %>% 
-        "*"(30.47917)
+        "*"(1e-9)
       
       pp_area = sweep(x = pp,
                       MARGIN = 1, 
@@ -163,31 +163,40 @@ modelRunner = function(path,
     }
     
     # read ascii file of 14 global biomes
-    biomes_ras <- raster::raster("./data/raw/14biomes.txt")
-    
-    # harmonize with default spatial settings used in this context
-    biomes_ras <- raster::extend(biomes_ras,extent(temp_ras))
-    extent(biomes_ras) <- raster::extent(temp_ras)
-    
+    # biomes_ras <- raster::raster("./data/raw/14biomes.txt") 
+    # 
+    # # harmonize with default spatial settings used in this context
+    # biomes_ras <- raster::extend(biomes_ras,extent(temp_ras))
+    # extent(biomes_ras) <- raster::extent(temp_ras)
+    # 
+    # for (ii in rep(rev(na.omit(freq(biomes_ras, merge=T)[,1])),2)) {
+    #   mm = mask(biomes_ras,biomes_ras,maskvalue=ii, updatevalue = NA, inverse =T) %>% 
+    #     boundaries(.,type="outer", asNA = TRUE)
+    #   mm[!is.na(mm)] <- ii
+    #   biomes_ras <- raster::merge(biomes_ras, mm, overlap =T)
+    # }
+    # 
+    biomes_ras <- readRDS(file = "./data/input/14biomes_shp/14biomes.Rds")
+        
     # for vectorized extraction use matrix of biomes
     biomes = raster::as.matrix(biomes_ras)
-    
+
     # get values of biomes as vector
     biome_vals = as.vector(na.exclude(as.data.frame(
       raster::freq(biomes_ras))$value))
     
     # parameters as grid of same length for mapply function
     gg = expand.grid(time = 1:dim(pp)[3], biome_vals = biome_vals, 
-                     cats = dim(pp)[4])
+                     cats = 1:dim(pp)[4])
     
     # use mapply and generate array with corresponding dimensions
     biome_ts = array(
       # calculate time series for each biome and category (GPP, NPP, NEP)
-      mapply(function(z,y,x) sum(pp[,,y,z][biomes==x],na.rm=T), 
+      mapply(function(z,y,x) sum(pp_area[,,y,z][biomes==x],na.rm=T), 
              y=gg$time,
              x=gg$biome_vals,
              z=gg$cats),
-      dim=c(dim(pp)[3],length(biome_vals),dim(pp)[4]))
+      dim=c(dim(pp_area)[3],length(biome_vals),dim(pp_area)[4]))
     
     ## to be parallelized - but facing allocation issues
     # cl <- parallel::makeCluster(detectCores())
@@ -215,10 +224,9 @@ modelRunner = function(path,
                                 "Mediterranean Forests, Woodlands and Shrub",
                                 "Deserts and Xeric Shrublands",
                                 "Mangroves",
-                                "Lakes",
+                                "Inland Water",
                                 "Rock and Ice"),
                               outvar)
-    
     # write global ts
     if (missing(path)){
       saveRDS(object=biome_ts, file=paste0("./data/output/biomeTS_",paste(

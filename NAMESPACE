@@ -2,3 +2,4 @@
 
 export(getInputData)
 export(modelRunner)
+importFrom(foreach,"%dopar%")
