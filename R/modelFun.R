@@ -32,7 +32,8 @@ CONST = list(
   ko25 = 3.0e4,
   # Michaelis constant for CO2 (Pa) at 25 deg C
   kc25 = 30.0,
-  mean_month_length = 30.47917,
+  months_length = c(31,(28*3+29)/4,31,30,31,30,31,31,30,31,30,31),
+  mean_month_length = mean(c(31,(28*3+29)/4,31,30,31,30,31,31,30,31,30,31)),
   ## autotrophic respiration specific constants
   CONST_ATR = list(
     aa = 1,
@@ -119,7 +120,7 @@ modelProduction = function(outvar, i, temp, par, fpar, lai, co2, K){
   # Calculation of rubisco-activity-limited photosynthesis rate JC, molC/m2/d
   jc = c2 * vm  
   
-  # Calculation of daily gross photosynthesis, bpp, gC/d/m2
+  # Calculation of daily gross photosynthesis, gpp, gC/d/m2
   gpp = (je+jc-sqrt((je+jc)*(je+jc)-4.0*K$theta*je*jc))/(2.0*K$theta) 
   gpp[gpp<0] = 0
   
@@ -128,10 +129,10 @@ modelProduction = function(outvar, i, temp, par, fpar, lai, co2, K){
   gc()
   
   if ("GPP" %in% outvar && length(outvar) == 1) {
-    return(gpp)
+    return(gpp * rep(K$months_length, dim(temp)[3]/12))
     
   } else if ("GPP" %in% outvar && length(outvar) >1) {
-    multivar[,,,j] = gpp
+    multivar[,,,j] = gpp * rep(K$months_length, dim(temp)[3]/12)
     j = j+1
     
   }
@@ -161,33 +162,34 @@ modelProduction = function(outvar, i, temp, par, fpar, lai, co2, K){
   gc()
   
   if ("NPP" %in% outvar && length(outvar) == 1){
-    return(npp)
+    return(npp * rep(K$months_length, dim(temp)[3]/12))
     
   }else if("NPP" %in% outvar && length(outvar) >1) {
-    multivar[,,,j] = npp
+    multivar[,,,j] = npp* rep(K$months_length, dim(temp)[3]/12)
     j = j+1
     
   }
-  
-  ## Net Ecosystem Production (NEP) derived from Arrhenius-equatopm 
+    
+  ## Net Ecosystem Production (NEP) derived from Arrhenius-equation 
   ## (in mol CO2 /m2/d) (Lloyd and Taylor 1994)
-  
-  rhet = (0.1*exp(-30/(temp_i-120)*12)-0.99) * 44 *12^-1 * 1e-6 * 60 * 60 *24
-  
-  nep = npp - rhet 
-  nep[nep < 0] = 0
-  
-  # remove not needed objects since vectorized approach uses lot of memory 
-  rm(rhet, temp_i)
-  gc()
-  
-  if ("NEP" %in% outvar && length(outvar) == 1){
-    return(nep)
-    
-  } else if("NEP" %in% outvar && length(outvar) > 1) {
-    multivar[,,,j] = nep
-    j = j+1
-  }
+  # 
+  # rhet = (0.1*exp(-30/(temp_i-120)*12)-0.99) * 44 *12^-1 * 1e-6 * 60 * 60 *24
+  # rhet =  R10 * exp(308.56 *(1 / 56 - 1 / (temp_i + 46))) 
+  # rhet = 0.84 # to be parametrized (Cui. Yi-Bin et al. 2020)
+  # nep = npp - rhet 
+  # nep[nep < 0] = 0
+  # 
+  # # remove not needed objects since vectorized approach uses lot of memory 
+  # rm(rhet, temp_i)
+  # gc()
+  # 
+  # if ("NEP" %in% outvar && length(outvar) == 1){
+  #   return(nep * rep(K$months_length, dim(temp)[3]/12))
+  #   
+  # } else if("NEP" %in% outvar && length(outvar) > 1) {
+  #   multivar[,,,j] = nep * rep(K$months_length, dim(temp)[3]/12)
+  #   j = j+1
+  # }
   
   if(exists("multivar")) return(multivar)
   

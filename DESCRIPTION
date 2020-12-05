@@ -1,7 +1,7 @@
 Package: PhotoBioDynamics
 Title: Simulate global photosynthetic dynamics
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R:
     person(given = "Jannes",
            family = "Breier",
            role = c("aut", "cre"),
@@ -10,6 +10,18 @@ Authors@R:
 Description: Simulate global photosynthetic dynamics by using directly
     available remote sensing products. The approach is based on the work
     of Haxeltine and Prentice, 1996 (https://doi.org/10.1029/96GB02344).
+Depends:
+    R (>= 4.0.2),
+    magrittr(>= 1.5),
+    raster(>= 3.3.13)
+Imports:
+    foreach (>= 1.5.0),
+    ncdf4 (>= 1.17),
+    abind (>= 1.4.5),
+    lubridate (>= 1.7.9),
+    doParallel (>= 1.0.16),
+    rvest (>= 0.3.6),
+    stringr (>= 1.4.0)
 License: `use_mit_license()`
 Encoding: UTF-8
 LazyData: true
