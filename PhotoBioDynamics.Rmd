@@ -544,7 +544,7 @@ cowplot::ggdraw(GPP_biomes) +
             width = 0.5) +
 
   plot_annotation(title = "Modelling global biomass dynamics",
-                  subtitle = "Photosynthesis is the most important process to assimilate carbon dioxide. By using<br>the solar energy plants generate carbohydrates and thus biomass. The process depends on the intra- and<br>interannual meteorological changes as well as the distribution and composition of global ecosystems. However<br>a distinction must be made between <span style='color:#4e8863;'>Gross Primary Production (<b>GPP</b>)</span> and <span style='color:#ffc205;'>Net Primary Production (<b>NPP</b>)</span>.<br>While GPP accounts for all carbon beeing fixated NPP also accounts for the plants' respiration.<br>Some ecosystems, on the global scale <b>biomes</b>, account for the highest share of GPP/NPP.",
+                  subtitle = "Photosynthesis is the most important process to assimilate carbon dioxide. By using<br>the solar energy plants generate carbohydrates and thus biomass. The process depends on the intra- and<br>interannual meteorological changes as well as the distribution and composition of global ecosystems. However<br>a distinction must be made between <span style='color:#4e8863;'>Gross Primary Production (<b>GPP</b>)</span> and <span style='color:#ffc205;'>Net Primary Production (<b>NPP</b>)</span>.<br>While GPP accounts for all carbon beeing fixated NPP also accounts for the plants' respiration.<br>Some ecosystems, on the global scale <b>biomes</b>, account for the highest share in GPP/NPP.",
                   caption = "Data preparation, Modelling & Visualization by Jannes Breier  •  Data by NASA (MODIS. CERES) & NOAA (NCDC)")
 
 
