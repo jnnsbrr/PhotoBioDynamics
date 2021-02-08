@@ -21,7 +21,6 @@ knitr::opts_chunk$set(echo = TRUE, warning = F, fig.showtext = T,
 
 # packages
 library(tidyverse)
-library(rnaturalearth)
 library(sf)
 library(rgeos)
 library(cowplot)
@@ -78,13 +77,15 @@ new_scale <- function(new_aes) {
 ## Data read and prep
 
 ```{r data prep}
+# get special NaturalEathdata (https://www.naturalearthdata.com) not included in RNaturalEarthData package
+path_originaldata = .downloadSpecialNaturalEarhData()
 
 GPP_ras = readRDS(here::here("data", "output", "pp_GPP_ras.Rds"))
 NPP_ras = readRDS(here::here("data", "output", "pp_NPP_ras.Rds"))
-
 # bounding box for masking rasters, etc.
-bb_poly = st_read(here::here("data","input","static",
-                             "ne_50m_wgs84_bounding_box.shp")) %>% 
+bb_poly = st_read(paste0(path_originaldata, 
+                         "/orig/naturalearthdata/ne_50m_wgs84_bounding_box.shp")
+                  ) %>% 
   st_as_sf() %>%
   # st_crop(., st_bbox(extent(-180,180,-84.35156,90))) %>%    
   st_transform(crs = "+proj=robin")
@@ -146,8 +147,8 @@ GPP_biomes_df = data.frame("date" = dates, GPP_biomes_ts) %>%
   mutate(variable = gsub("X","",variable))
 
 # use 30 degree graticule for map overlay
-grat_poly = st_read(here::here("data","input","static",
-                               "ne_50m_graticules_30.shp")) %>% 
+grat_poly = st_read(paste0(path_originaldata, 
+                         "/orig/naturalearthdata/ne_50m_graticules_30.shp")) %>% 
   st_as_sf() %>% 
   # st_crop(., st_bbox(extent(-180,180,-60.05,90))) %>%     
   st_transform(crs = "+proj=robin") %>% 
@@ -157,8 +158,8 @@ grat_poly = st_read(here::here("data","input","static",
 grat_poly_60s <- filter(grat_poly, degrees %in% seq(from = 0,to = 180, by = 60))
 
 # land-ocean boundaries
-ne_ocean = st_read(here::here("data","input","static",
-                              "ne_50m_ocean.shp")) %>% 
+ne_ocean = st_read(paste0(path_originaldata, 
+                         "/orig/naturalearthdata/ne_50m_ocean.shp")) %>% 
   st_as_sf() %>%
   st_transform(crs = "+proj=robin")
 
