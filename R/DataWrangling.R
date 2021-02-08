@@ -1,5 +1,40 @@
 # inner FUN ####
 
+.downloadSpecialNaturalEarhData = function(check_valid = TRUE, delete_zip = TRUE) {
+  ne_data = c("ne_50m_wgs84_bounding_box.zip", "ne_50m_graticules_30.zip",
+              "ne_50m_ocean.zip")    
+  path_originaldata = rappdirs::user_data_dir("PhotoBioDynamics") %>% 
+    gsub("\\\\", "/", .)
+  if (!dir.exists(paste0(path_originaldata, "/orig/naturalearthdata"))) {
+    dir.create(path = paste0(path_originaldata, "/orig/naturalearthdata"), recursive = TRUE)
+  }
+    sapply(ne_data, function(fn) {
+      url_temp = paste0("https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/50m/physical/", 
+                        fn)
+      tryCatch(
+        {
+          download.file(url = url_temp,
+                        destfile = paste0(path_originaldata, "/orig/naturalearthdata/", fn),
+                        mode="wb")
+        },
+        error = function(cond) {
+          message(paste0(" "))
+          message(cond)
+          message(paste0(" "))
+          message(paste0("! YOU MAY HAVE TO FIND AN ALTERNATIVE SOURCE. !"))
+        })
+      
+      unzip(paste0(path_originaldata, "/orig/naturalearthdata/", fn),
+            exdir=paste0(path_originaldata, "/orig/naturalearthdata"))
+      if (delete_zip) {
+        file.remove(paste0(path_originaldata, "/orig/naturalearthdata/", fn))
+      }
+    }) %>% 
+    invisible()
+    # for convenienve
+    return(path_originaldata)
+}
+
 .combineNCData = function(path, fn_const, y, var, dates) {
   source("./R/ncdfFun.R")
   out = .read.ncdf.var(path = path, 
