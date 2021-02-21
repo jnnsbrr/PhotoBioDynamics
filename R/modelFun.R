@@ -1,57 +1,14 @@
+# ---------------------------------------------------------------------------- #
+# model functions to be used within the model run
+# ---------------------------------------------------------------------------- #
 
-# parameter initialization ####
+.modelPrimaryProduction = function(outvar, i, temp, par, fpar, lai, co2,
+                                   paramfile){
 
-CONST = list(
-  # average plant albedo
-  albedo = 1-0.17,
-  # radiation transmission correction factor
-  alphaa = 0.5,
-  # O2 partial pressure [Pa]
-  po2 = 20.9e3,
-  # atmospheric pressure [Pa]
-  p = 1.0e5,
-  # leaf respiration, fraction of Vmax
-  bc3 = 0.015,
-  # co-limitation (shape) parameter
-  theta = 0.7,
-  # inter-cellular to ambient CO2 partial pressure (0.6-0.8) [Wong et al.1979; Long and Hutchin 1991]
-  lambda = 0.7,
-  # molar mass of carbon
-  cmass = 12,
-  daylength = 24,
-  #  intrinsic quantum efficiency of CO2 uptake in C3 plants
-  alphac3 = 0.08,
-  # q10 for temperature-sensitive parameter ko
-  q10ko = 1.2,
-  # q10 for temperature-sensitive parameter kc
-  q10kc = 2.1,
-  # q10 for temperature-sensitive parameter tau
-  q10tau = 0.57,
-  tau25 = 2600.0,
-  # value of tau at 25 deg C
-  ko25 = 3.0e4,
-  # Michaelis constant for CO2 (Pa) at 25 deg C
-  kc25 = 30.0,
-  months_length = c(31,(28*3+29)/4,31,30,31,30,31,31,30,31,30,31),
-  mean_month_length = mean(c(31,(28*3+29)/4,31,30,31,30,31,31,30,31,30,31)),
-  ## autotrophic respiration specific constants
-  CONST_ATR = list(
-    aa = 1,
-    ln = 50/365, # in gC/m2
-    # divided by mean_month_length
-    kr = 1.67/30.47917, # in gC /kg /day 
-    tref = 10, # in degC
-    t0 = 46.02, # in degC
-    e0 = 308.56, # in K  
-    cn = 0.001 # in g C/ m2
-  )
-)
-
-# model function ####
-
-modelProduction = function(outvar, i, temp, par, fpar, lai, co2, K){
-
-  ## data prep
+  ## data preparation
+  
+  # load model parameters
+  K = yaml::read_yaml(file=paramfile)
   
   # possibility to return multi output variables ("GPP", "NPP", "NEP")  
   if (length(outvar) > 1) {
@@ -169,33 +126,5 @@ modelProduction = function(outvar, i, temp, par, fpar, lai, co2, K){
     j = j+1
     
   }
-    
-  ## Net Ecosystem Production (NEP) derived from Arrhenius-equation 
-  ## (in mol CO2 /m2/d) (Lloyd and Taylor 1994)
-  # 
-  # rhet = (0.1*exp(-30/(temp_i-120)*12)-0.99) * 44 *12^-1 * 1e-6 * 60 * 60 *24
-  # rhet =  R10 * exp(308.56 *(1 / 56 - 1 / (temp_i + 46))) 
-  # rhet = 0.84 # to be parametrized (Cui. Yi-Bin et al. 2020)
-  # nep = npp - rhet 
-  # nep[nep < 0] = 0
-  # 
-  # # remove not needed objects since vectorized approach uses lot of memory 
-  # rm(rhet, temp_i)
-  # gc()
-  # 
-  # if ("NEP" %in% outvar && length(outvar) == 1){
-  #   return(nep * rep(K$months_length, dim(temp)[3]/12))
-  #   
-  # } else if("NEP" %in% outvar && length(outvar) > 1) {
-  #   multivar[,,,j] = nep * rep(K$months_length, dim(temp)[3]/12)
-  #   j = j+1
-  # }
-  
   if(exists("multivar")) return(multivar)
-  
-  # Returns a multidimensional numerical array including two dimensions
-  #    representing latitude and longitude, a time dimension and if set 
-  #    a categorical dimensions reflecting possible outputes "GPP",
-  #    "NPP" and/or "NEP".
-  
 }

@@ -1,53 +1,8 @@
-# inner FUN ####
+# ---------------------------------------------------------------------------- #
+# download and process model input of required format and boundaries (time)
+# ---------------------------------------------------------------------------- #
 
-.downloadSpecialNaturalEarhData = function(check_valid = TRUE, delete_zip = TRUE) {
-  ne_data = c("ne_50m_wgs84_bounding_box.zip", "ne_50m_graticules_30.zip",
-              "ne_50m_ocean.zip")    
-  path_originaldata = rappdirs::user_data_dir("PhotoBioDynamics") %>% 
-    gsub("\\\\", "/", .)
-  if (!dir.exists(paste0(path_originaldata, "/orig/naturalearthdata"))) {
-    dir.create(path = paste0(path_originaldata, "/orig/naturalearthdata"), recursive = TRUE)
-  }
-    sapply(ne_data, function(fn) {
-      url_temp = paste0("https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/50m/physical/", 
-                        fn)
-      tryCatch(
-        {
-          download.file(url = url_temp,
-                        destfile = paste0(path_originaldata, "/orig/naturalearthdata/", fn),
-                        mode="wb")
-        },
-        error = function(cond) {
-          message(paste0(" "))
-          message(cond)
-          message(paste0(" "))
-          message(paste0("! YOU MAY HAVE TO FIND AN ALTERNATIVE SOURCE. !"))
-        })
-      
-      unzip(paste0(path_originaldata, "/orig/naturalearthdata/", fn),
-            exdir=paste0(path_originaldata, "/orig/naturalearthdata"))
-      if (delete_zip) {
-        file.remove(paste0(path_originaldata, "/orig/naturalearthdata/", fn))
-      }
-    }) %>% 
-    invisible()
-    # for convenienve
-    return(path_originaldata)
-}
-
-.combineNCData = function(path, fn_const, y, var, dates) {
-  source("./R/ncdfFun.R")
-  out = .read.ncdf.var(path = path, 
-                      fn = paste0(fn_const, 
-                                  dates[y],
-                                  ".nc"),
-                      varname = var)
-}
-
-# abind along third dimension
-.acomb = function(...) abind::abind(..., along = 3)
-
-
+# download and process global radiation data ####
 .downloadIrradianceNCs = function(ff, url, nodes, path.originaldata) {
   
   page = xml2::read_html(paste0(url, nodes[ff]))
@@ -75,6 +30,8 @@
       invisible()
 }
 
+
+# download and process global FPAR and LAI data ####
 .downloadFPARLAINCs = function(yy, years, co2_tab, path.originaldata) {
   
   url_catalog = "https://icdc.cen.uni-hamburg.de/thredds/catalog/ftpthredds/modis_lai_fpar/global/"
@@ -131,6 +88,7 @@
   
 }
 
+
 # download and process global temperature data ####
 .getTemperatureData = function(years, path.originaldata) {
   
@@ -165,7 +123,7 @@
 }
 
 
-# download and process CO2 data from Mauna Loa (good representativity) #####
+# download and process CO2 data from Mauna Loa (good representativity) ####
 .getCO2Data = function(years, path.originaldata) {
   
   url_co2 = 'ftp://aftp.cmdl.noaa.gov/products/trends/co2/co2_mm_mlo.txt'
@@ -222,8 +180,7 @@
   lai_ts = foreach::foreach(y = 1:length(dates_to_extract), 
                             .combine = '.acomb', 
                             .multicombine = TRUE,
-                            .export=c(# "dates_to_extract, path.originaldata",
-                              ".combineNCData")
+                            .export=c(".combineNCData")
   ) %dopar% {
     # model call
     .combineNCData(path = paste0(path.originaldata, "/orig/fpar_lai/"),
@@ -242,7 +199,8 @@
     brick(., nl=dim(lai_ts)[3]) %>% 
     setValues(., lai_ts) %>% 
     # mean over 5 years to get rid of outliers and gaps (cells with no data)
-    stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,na.rm = TRUE)
+    stackApply(., indices = rep(1:12,times = nlayers(.)/12),
+               fun = mean,na.rm = TRUE)
   
   if (!dir.exists("./data/input/")) {
     dir.create(path = "./data/input/", recursive = TRUE)
@@ -273,7 +231,8 @@
     brick(., nl=dim(fpar_ts)[3]) %>% 
     setValues(., fpar_ts) %>% 
     # mean over 5 years to get rid of outliers and gaps (cells with no data)
-    stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,na.rm = TRUE)
+    stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,
+               na.rm = TRUE)
   
   if (!dir.exists("./data/input/")) {
     dir.create(path = "./data/input/", recursive = TRUE)
@@ -374,8 +333,8 @@
 #'
 #' Download and process required input data that is open access and currently
 #' (year 2020) available. 
-#' This may take a while, depending on your Wifi.
-#' Processed data is written to the package's data folder ('./data/input').
+#' This may take a while, depending on your connection.
+#' Processed model input data is stored at "./data/input
 #'
 #' @param year integer. Define a reference year for recycled data (fpar/lai)
 #'    end for the time series of outputs to be written. 
@@ -384,8 +343,8 @@
 #'    likely comprises a large amount of memory. Defaults to `TRUE`
 #'
 #' @return None. Optional raw output is written to 
-#'    `rappdirs::user_data_dir("PhotoBioDynamics")`, processed output is stored
-#'    in the package `./data` folder.
+#'    `rappdirs::user_data_dir("PhotoBioDynamics")`, processed model input into
+#'    "./data/input".
 #'
 #' @examples \dontrun{
 #'
@@ -440,52 +399,4 @@ getInputData = function(year, delete.originaldata = TRUE){
   if(delete.originaldata) unlink(paste0(path_originaldata, "/orig"))
     
 }
-
-
-
-# former LAI FPAR ####
-
-# # fraction absorbed photosynthetic radiation (FPAR) ####
-# names_phenology_1985 = get.ncdf.varnames("./data/raw/","global_phenology_1985.nc4")
-# fpar_1985 = read.ncdf.var("./data/raw/","global_phenology_1985.nc4","fPAR_dom_biome")
-# lai_1985 = read.ncdf.var("./data/raw/","global_phenology_1985.nc4","LAI_dom_biome")
-# # harmonize dimensions
-# fpar_1985 = aperm(fpar_1985,c(2,1,3))
-# lai_1985 = aperm(lai_1985,c(2,1,3))
-# # project data on raster brick
-# fpar_1985_ras = brick(fpar_1985,xmn=-180, xmx=180, ymn=-90, ymx=90)
-# lai_1985_ras = brick(lai_1985,xmn=-180, xmx=180, ymn=-90, ymx=90)
-# # assign coordinate reference system and save as RDS
-# crs(fpar_1985_ras) = crs("+init=epsg:4326")
-# crs(lai_1985_ras) = crs("+init=epsg:4326")
-# saveRDS(object=fpar_1985_ras, file="./data/processed_grid/fpar_1985.Rds")
-# saveRDS(object=lai_1985_ras, file="./data/processed_grid/lai_1985.Rds")
-
-
-# former PAR ####
-
-# # ray -> photosynthetic active ray (PAR) ####
-# r_mean = read.ncdf("./data/raw/","swdown_erainterim_1901-2010.nc")
-# # extract required time interval 
-# r_mean = r_mean[,280:1,1009:1320]#1020
-# r_mean = r_mean[,280:1,1273:1284]#1020
-# 
-# r_mean = aperm(r_mean,c(2,1,3))
-# # compute means for every month across time interval, currently no faster approach avail
-# idx = lapply(1:12,FUN = function(x)(seq(0,(dim(r_mean)[3]-12),12)+x))
-# for (ii in 1:12){
-#   print(ii)
-#   r_mean[,,ii] = apply(r_mean[,,idx[[ii]]],c(1,2), mean, na.rm=T)
-# }
-# # delete redundant years/data slices
-# r_mean = r_mean[,,-c(13:312)]
-# # project data on raster brick
-# r_mean_ras = brick(r_mean,xmn=-180, xmx=180, ymn=-56, ymx=84)
-# # harmonize extent
-# r_mean_ras = extend(r_mean_ras,extent(c(-180,180,-90,90)))
-# # calculate photosynthetic active radiation
-# par_mean_ras = (0.5/0.27)*(r_mean_ras*0.0864)# /24/60/60*10^6*0.22 # to par mol/m^2/day to W/m^2/day
-# # assign coordinate reference system and save as RDS
-# crs(par_mean_ras) = crs("+init=epsg:4326")
-# saveRDS(object=par_mean_ras, file="./data/processed_grid/par_mean1985-2010.Rds")
 

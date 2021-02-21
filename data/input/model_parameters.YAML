@@ -1,0 +1,55 @@
+# model parameters
+
+# average plant albedo
+albedo: 0.83
+# radiation transmission correction factor
+alphaa: 0.5
+# O2 partial pressure [Pa]
+po2: 20.9e+3
+# atmospheric pressure [Pa]
+p: 1.0e+5
+# leaf respiration, fraction of Vmax
+bc3: 0.015
+# co-limitation (shape) parameter
+theta: 0.7
+# inter-cellular to ambient CO2 partial pressure (0.6-0.8) [Wong et al.1979; Long and Hutchin 1991]
+lambda: 0.7
+# molar mass of carbon
+cmass: 12
+daylength: 24
+#  intrinsic quantum efficiency of CO2 uptake in C3 plants
+alphac3: 0.08
+# q10 for temperature-sensitive parameter ko
+q10ko: 1.2
+# q10 for temperature-sensitive parameter kc
+q10kc: 2.1
+# q10 for temperature-sensitive parameter tau
+q10tau: 0.57
+tau25: 2600.0
+# value of tau at 25 deg C
+ko25: 3.0e+4
+# Michaelis constant for CO2 (Pa) at 25 deg C
+kc25: 30.0
+months_length:
+  - 31.00
+  - 28.25
+  - 31.00
+  - 30.00
+  - 31.00
+  - 30.00
+  - 31.00
+  - 31.00
+  - 30.00
+  - 31.00
+  - 30.00
+  - 31.00
+# autotrophic respiration specific constants
+CONST_ATR:
+  aa: 1
+  ln: 0.1369863 # 50/365 in gC/m2
+  # 30.47917 mean month length
+  kr: 0.05479152 # 1.67/30.47917 in gC /kg /day
+  tref: 10 # in degC
+  t0: 46.02 # in degC
+  e0: 308.56 # in K
+  cn: 0.001 # in g C/ m2

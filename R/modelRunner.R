@@ -1,8 +1,3 @@
-# require("doParallel")
-# require("parallel")
-# require("abind")
-# require("raster")
-
 #' A model wrapper to run different models
 #'
 #' Simulation of C3 photosynthesis in terms of Gross Primary Production (GPP), 
@@ -36,10 +31,8 @@
 
 modelRunner = function(path, 
                       outvar = c("GPP", "NPP"),
-                      format = c("GLOBAL_TS", "BIOME_TS","GRID")) {
-  
-  # pb <- txtProgressBar(style = 3)
-  # setTxtProgressBar(pb = pb, value = 0.3)
+                      format = c("GLOBAL_TS", "BIOME_TS","GRID"),
+                      paramfile = "./data/input/model_parameters.YAML") {
   
   ## load pre-processed RDS (former large netCDF) files as raster
   
@@ -73,17 +66,17 @@ modelRunner = function(path,
   pp = foreach::foreach(i = 1:(dim(temp)[3]), 
                         .combine = '.acomb', 
                         .multicombine = TRUE, 
-                        .export = c("modelProduction", "CONST")
+                        .export = c(".modelPrimaryProduction")
   ) %dopar% {
     # model call
-    modelProduction(outvar = outvar, 
+    .modelPrimaryProduction(outvar = outvar, 
                     i = i, 
                     temp = temp,
                     par = par, 
                     fpar = fpar, 
                     lai = lai, 
                     co2 = co2, 
-                    K = CONST)
+                    K = paramfile)
   }
   
   # close cluster
@@ -238,5 +231,4 @@ modelRunner = function(path,
     }
     
   }
-  # close(pb)
 }
