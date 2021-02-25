@@ -113,9 +113,9 @@
     aperm(c(2,1,3))
   
   # project data on raster brick
-  temp_ras = raster(res=0.5, crs = crs("+init=epsg:4326")) %>% 
-    brick(., nl = dim(temp)[3]) %>% 
-    setValues(., values = temp)
+  temp_ras = raster::raster(res=0.5, crs = raster::crs("+init=epsg:4326")) %>% 
+    raster::brick(., nl = dim(temp)[3]) %>% 
+    raster::setValues(., values = temp)
   
   if (!dir.exists(path.inputdata)) {
     dir.create(path = path.inputdata, recursive = TRUE)
@@ -157,7 +157,7 @@
                            path.inputdata = "./data/input/") {
   
   if (file.exists("./data/input/CO2_tab.Rds")) {
-    co2_tab =   readRDS(file = "./data/input/CO2_tab.Rds")
+    co2_tab = readRDS(file = "./data/input/CO2_tab.Rds")
 
   } else {
     stop("Please run PhotoBioDynamics::.wranglingCO2Data() first.")
@@ -198,11 +198,11 @@
   lai_ts[lai_ts == 255] = 0
   
   
-  lai_ras = raster(res=0.5, crs = crs("+init=epsg:4326")) %>% 
-    brick(., nl=dim(lai_ts)[3]) %>% 
-    setValues(., lai_ts) %>% 
+  lai_ras = raster::raster(res=0.5, crs =raster:: crs("+init=epsg:4326")) %>% 
+    raster::brick(., nl=dim(lai_ts)[3]) %>% 
+    raster::setValues(., lai_ts) %>% 
     # mean over 5 years to get rid of outliers and gaps (cells with no data)
-    stackApply(., indices = rep(1:12,times = nlayers(.)/12),
+    raster::stackApply(., indices = rep(1:12,times = raster::nlayers(.)/12),
                fun = mean,na.rm = TRUE)
   
   saveRDS(object=lai_ras, file=paste0(path.inputdata,"lai_ras.Rds"))
@@ -227,12 +227,12 @@
   fpar_ts = aperm(fpar_ts, c(2,1,3))
   fpar_ts[360:1,,] = fpar_ts
   fpar_ts[fpar_ts == 255] = 0
-  fpar_ras = raster(res=0.5, crs = crs("+init=epsg:4326")) %>% 
-    brick(., nl=dim(fpar_ts)[3]) %>% 
-    setValues(., fpar_ts) %>% 
+  fpar_ras = raster::raster(res=0.5, crs = raster::crs("+init=epsg:4326")) %>% 
+    raster::brick(., nl=dim(fpar_ts)[3]) %>% 
+    raster::setValues(., fpar_ts) %>% 
     # mean over 5 years to get rid of outliers and gaps (cells with no data)
-    stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,
-               na.rm = TRUE)
+    raster::stackApply(., indices = rep(1:12,times = raster::nlayers(.)/12), 
+                       fun = mean, na.rm = TRUE)
   
   if (!dir.exists(path.inputdata)) {
     dir.create(path = path.inputdata, recursive = TRUE)
@@ -313,11 +313,11 @@
     stop("Please run photodynamics::.wranglingLAIFPARData() first.")
   }
   
-  par_ras = raster(res=c(1,1), crs=crs(lai_ras)) %>%
-    brick(., nl=dim(par_ts)[3]) %>% 
-    setValues(., values = par_ts) %>% 
-    disaggregate(., fact = 2) %>%
-    stackApply(.,indices = rep(1:12, times = dim(par_ts)[3]/12), 
+  par_ras = raster::raster(res=c(1,1), crs=raster::crs(lai_ras)) %>%
+    raster::brick(., nl=dim(par_ts)[3]) %>% 
+    raster::setValues(., values = par_ts) %>% 
+    raster::disaggregate(., fact = 2) %>%
+    raster::stackApply(.,indices = rep(1:12, times = dim(par_ts)[3]/12), 
                fun = mean, 
                na.rm = TRUE) %>% 
     mask(., mask = lai_ras[[1]])
