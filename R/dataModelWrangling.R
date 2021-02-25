@@ -90,7 +90,8 @@
 
 
 # download and process global temperature data ####
-.getTemperatureData = function(years, path.originaldata) {
+.getTemperatureData = function(years, path.originaldata, 
+                               path.inputdata = "./data/input/") {
   
   url_temp = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.GHCN_CAMS/.gridded/.deg0p5/data.nc"
   download.file(url = url_temp,
@@ -106,7 +107,7 @@
   dimnames(temp)[[3]] = as.character(time_dim)
   
   # extract required time interval
-  time_extract = which(!is.na(match(year(time_dim), years)))
+  time_extract = which(!is.na(match(lubridate::year(time_dim), years)))
   
   temp = temp[c(361:720,1:360),360:1,time_extract] %>% 
     aperm(c(2,1,3))
@@ -116,15 +117,16 @@
     brick(., nl = dim(temp)[3]) %>% 
     setValues(., values = temp)
   
-  if (!dir.exists("./data/input/")) {
-    dir.create(path = "./data/input/", recursive = TRUE)
+  if (!dir.exists(path.inputdata)) {
+    dir.create(path = path.inputdata, recursive = TRUE)
   }
-  saveRDS(object=temp_ras, file="./data/input/temp_ras.Rds")
+  saveRDS(object=temp_ras, file=paste0(path.inputdata, "temp_ras.Rds"))
 }
 
 
 # download and process CO2 data from Mauna Loa (good representativity) ####
-.getCO2Data = function(years, path.originaldata) {
+.getCO2Data = function(years, path.originaldata, 
+                       path.inputdata = "./data/input/") {
   
   url_co2 = 'ftp://aftp.cmdl.noaa.gov/products/trends/co2/co2_mm_mlo.txt'
   co2_dat = read.table(file = url_co2,
@@ -140,24 +142,25 @@
                        average = co2_dat$average,
                        interpolated = co2_dat$interpolated,
                        trend = co2_dat$trend) %>% 
-    filter(year >= min(years) & year <= max(years))
+    dplyr::filter(year >= min(years) & year <= max(years))
   
-  if (!dir.exists("./data/input/")) {
-    dir.create(path = "./data/input/", recursive = TRUE)
+  if (!dir.exists(path.inputdata)) {
+    dir.create(path = path.inputdata, recursive = TRUE)
   }
 
-  saveRDS(object=co2_tab, file = "./data/input/CO2_tab.Rds")
+  saveRDS(object=co2_tab, file = paste0(path.inputdata, "CO2_tab.Rds"))
 }
 
 
 # download and process Leaf Area Index (LAI) & Fraction of Absorbed PAR (FPAR) ####
-.getLAIFPARData = function(years, cluster, path.originaldata) {
+.getLAIFPARData = function(years, cluster, path.originaldata, 
+                           path.inputdata = "./data/input/") {
   
   if (file.exists("./data/input/CO2_tab.Rds")) {
     co2_tab =   readRDS(file = "./data/input/CO2_tab.Rds")
 
   } else {
-    stop("Please run photodynamics::.wranglingCO2Data() first.")
+    stop("Please run PhotoBioDynamics::.wranglingCO2Data() first.")
   }
 
   # parallel foreach with multidim array returning
@@ -202,10 +205,7 @@
     stackApply(., indices = rep(1:12,times = nlayers(.)/12),
                fun = mean,na.rm = TRUE)
   
-  if (!dir.exists("./data/input/")) {
-    dir.create(path = "./data/input/", recursive = TRUE)
-  }
-  saveRDS(object=lai_ras, file="./data/input/lai_ras.Rds")
+  saveRDS(object=lai_ras, file=paste0(path.inputdata,"lai_ras.Rds"))
   
   
   # parallel foreach with multidim array returning
@@ -234,17 +234,18 @@
     stackApply(., indices = rep(1:12,times = nlayers(.)/12), fun = mean,
                na.rm = TRUE)
   
-  if (!dir.exists("./data/input/")) {
-    dir.create(path = "./data/input/", recursive = TRUE)
+  if (!dir.exists(path.inputdata)) {
+    dir.create(path = path.inputdata, recursive = TRUE)
   }
   
-  saveRDS(object=fpar_ras, file="./data/input/fpar_ras.Rds")
+  saveRDS(object=fpar_ras, file=paste0(path.inputdata, "fpar_ras.Rds"))
   
 }
 
 
 # download and process Photosynthetic Active Radiation (PAR) ####
-.getPARData = function(paryears, cluster, path.originaldata) {
+.getPARData = function(paryears, path.originaldata, cluster,
+                       path.inputdata = "./data/input/") {
   
   par_url = "https://opendap.larc.nasa.gov/opendap/SRB/LPSA/SRB_REL3.0_LPSA_MONTHLY_NC/rel3.0/"
   page = xml2::read_html(paste0(par_url, "contents.html"))
@@ -321,11 +322,11 @@
                na.rm = TRUE) %>% 
     mask(., mask = lai_ras[[1]])
   
-  if (!dir.exists("./data/input/")) {
-    dir.create(path = "./data/input/", recursive = TRUE)
+  if (!dir.exists(path.inputdata)) {
+    dir.create(path = path.inputdata, recursive = TRUE)
   }
   
-  saveRDS(object=par_ras, file="./data/input/par_ras.Rds")
+  saveRDS(object=par_ras, file=paste0(path.inputdata,"par_ras.Rds"))
 }
 
 

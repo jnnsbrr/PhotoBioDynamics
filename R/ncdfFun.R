@@ -42,10 +42,10 @@
                                           "Datetime", "date", "Date"))[1]] 
                                           #find time variable
   }
-  times <- ncvar_get(nf, timevar)
+  times <- ncdf4::ncvar_get(nf, timevar)
   if (length(timevar)==0) stop(
     "ERROR! Could not identify the correct time variable")
-  timeatt <- ncatt_get(nf, timevar) #get attributes
+  timeatt <- ncdf4::ncatt_get(nf, timevar) #get attributes
   timedef <- strsplit(timeatt$units, " ")[[1]]
   timeunit <- timedef[1]
   tz <- timedef[5]
@@ -62,15 +62,15 @@
     tz <- "UTC"
   }
 
-  timestart <- ymd_hms(paste(timedef[3], timedef[4]), tz=tz)
+  timestart <- lubridate::ymd_hms(paste(timedef[3], timedef[4]), tz=tz)
 
   f <- switch(tolower(timeunit), #Find the correct lubridate time function based on the unit
-              seconds=seconds, second=seconds, sec=seconds,
-              minutes=minutes, minute=minutes, min=minutes,
-              hours=hours,     hour=hours,     h=hours,
-              days=days,       day=days,       d=days,
-              months=months,   month=months,   m=months,
-              years=years,     year=years,     yr=years,
+              seconds=lubridate::seconds, second=lubridate::seconds, sec=lubridate::seconds,
+              minutes=lubridate::minutes, minute=lubridate::minutes, min=lubridate::minutes,
+              hours=lubridate::hours,     hour=lubridate::hours,     h=lubridate::hours,
+              days=lubridate::days,       day=lubridate::days,       d=dlubridate::ays,
+              months=base::months,        month=base::months,        m=base::months,
+              years=lubridate::years,     year=lubridate::years,     yr=lubridate::years,
               NA
   )
   suppressWarnings(if (is.na(f)) stop(

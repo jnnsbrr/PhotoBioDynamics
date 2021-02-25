@@ -17,15 +17,15 @@
   }
   
   # subset of a month
-  temp_i = temp[,,i]
-  co2_i = co2[i]
+  temp_i = temp[[i]]
+  co2_i = co2[i,]$interpolated
   
   # repeating index vector for input variables par, fpar and lai that only 
   # comprises 1 year/12 month
   idseq = rep(1:12,times=dim(temp)[3]/12)
-  par_i = par[,,idseq[i]]
-  lai_i = lai[,,idseq[i]]
-  fpar_i = fpar[,,idseq[i]]
+  par_i = par[[idseq[i]]]
+  lai_i = lai[[idseq[i]]]
+  fpar_i = fpar[[idseq[i]]]
   
   
   ## GPP PART 1: PAR-limited photosynthesis
