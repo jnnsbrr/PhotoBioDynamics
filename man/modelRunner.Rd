@@ -6,8 +6,9 @@
 \usage{
 modelRunner(
   path,
-  outvar = c("GPP", "NPP", "NEP"),
-  format = c("GLOBAL_TS", "BIOME_TS", "GRID")
+  outvar = c("GPP", "NPP"),
+  format = c("GLOBAL_TS", "BIOME_TS", "GRID"),
+  paramfile = "./data/input/model_parameters.YAML"
 )
 }
 \arguments{
