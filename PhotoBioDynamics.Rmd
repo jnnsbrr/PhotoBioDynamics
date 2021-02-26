@@ -122,6 +122,42 @@ GPP_mean <-   mean(GPP_mean, GPP_mean_boundaries, na.rm = TRUE) %>%
 
 GPP_mean[is.nan(GPP_mean)] = NA
 
+# biome values, names and assigned colors
+biome_names <-
+  list(c(1:14,98,99),
+       c("Trop. and Subtrop. Moist Broadleaf Forests",
+         "Trop. and Subtrop. Dry Broadleaf Forests" ,
+         "Trop. and Subtrop. Coniferous Forests",
+         "Temperate Broadleaf and Mixed Forests",
+         "Temperate Conifer Forests",
+         "Boreal Forests/Taiga",
+         "Trop. and Subtrop. Grasslands, Savannas and Shrub",
+         "Temperate Grasslands, Savannas and Shrub",
+         "Flooded Grasslands and Savannas",
+         "Montane Grasslands and Shrublands",
+         "Tundra",
+         "Med. Forests, Woodlands and Scrub",
+         "Deserts and Xeric Shrub",
+         "Mangroves",
+         "Inland Water",
+         "Rock and Ice"),
+       c("darkgreen",
+         "orange",
+         "chocolate4",
+         "yellowgreen",
+         "purple",
+         "violetred4",
+         "lawngreen",
+         "yellow4",
+         "lightseagreen",
+         "darkred",
+         "slategray3",
+         "tomato",
+         "yellow",
+         "darkcyan",
+         "royalblue",
+         "grey30")
+     ) %>% as.data.frame(col.names=c("BIOME", "NAME", "COLOR"))
 
 # prepare time series data
 GPP_tsdat = readRDS(paste(path_originaldata,"/output/globalTS_GPP-NPP.Rds", sep="/"))
@@ -163,44 +199,6 @@ grat_poly = st_read(paste0(path_originaldata,
 
 # 60 degree version for small map plots
 grat_poly_60s <- filter(grat_poly, degrees %in% seq(from = 0,to = 180, by = 60))
-
-
-# biome values, names and assigned colors
-biome_names <-
-  list(c(1:14,98,99),
-       c("Trop. and Subtrop. Moist Broadleaf Forests",
-         "Trop. and Subtrop. Dry Broadleaf Forests" ,
-         "Trop. and Subtrop. Coniferous Forests",
-         "Temperate Broadleaf and Mixed Forests",
-         "Temperate Conifer Forests",
-         "Boreal Forests/Taiga",
-         "Trop. and Subtrop. Grasslands, Savannas and Shrub",
-         "Temperate Grasslands, Savannas and Shrub",
-         "Flooded Grasslands and Savannas",
-         "Montane Grasslands and Shrublands",
-         "Tundra",
-         "Med. Forests, Woodlands and Scrub",
-         "Deserts and Xeric Shrub",
-         "Mangroves",
-         "Inland Water",
-         "Rock and Ice"),
-       c("darkgreen",
-         "orange",
-         "chocolate4",
-         "yellowgreen",
-         "purple",
-         "violetred4",
-         "lawngreen",
-         "yellow4",
-         "lightseagreen",
-         "darkred",
-         "slategray3",
-         "tomato",
-         "yellow",
-         "darkcyan",
-         "royalblue",
-         "grey30")
-     ) %>% as.data.frame(col.names=c("BIOME", "NAME", "COLOR"))
 
 # as named vector (required for color association in scale functions)   
 biome_colors <- setNames(as.character(biome_names$COLOR), biome_names$BIOME)  
