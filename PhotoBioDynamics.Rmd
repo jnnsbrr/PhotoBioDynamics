@@ -80,10 +80,10 @@ static_path = system.file("data",mapping="static", package="PhotoBioDynamics")
 
 ```{r data prep}
 # get special NaturalEathdata (https://www.naturalearthdata.com) not included in RNaturalEarthData package
-path_originaldata = .downloadSpecialNaturalEarhData()
+path_originaldata = downloadSpecialNaturalEarthData()
 
-GPP_ras = readRDS(here::here("data", "output", "pp_GPP_ras.Rds"))
-NPP_ras = readRDS(here::here("data", "output", "pp_NPP_ras.Rds"))
+GPP_ras = readRDS(paste(path_originaldata,"/output/pp_GPP_ras.Rds", sep = "/"))
+NPP_ras = readRDS(paste(path_originaldata,"/output/pp_NPP_ras.Rds", sep = "/"))
 # bounding box for masking rasters, etc.
 bb_poly = st_read(paste0(path_originaldata,
                          "/orig/naturalearthdata/ne_50m_wgs84_bounding_box.shp")
@@ -124,9 +124,8 @@ GPP_mean[is.nan(GPP_mean)] = NA
 
 
 # prepare time series data
-GPP_tsdat = readRDS(here::here("data", "output", "globalTS_GPP-NPP.Rds"))
-GPP_biomes_ts = readRDS(here::here("data", "output",
-                                   "biomeTS_GPP-NPP.Rds"))[,,1] %>%
+GPP_tsdat = readRDS(paste(path_originaldata,"/output/globalTS_GPP-NPP.Rds", sep="/"))
+GPP_biomes_ts = readRDS(paste(path_originaldata,"/output/biomeTS_GPP-NPP.Rds", sep="/"))[,,1] %>%
  `colnames<-`(biome_names$BIOME)
 
 dates <- rownames(GPP_tsdat) %>%
@@ -148,6 +147,12 @@ GPP_biomes_df = data.frame("date" = dates, GPP_biomes_ts) %>%
   gather(key = "variable", value = "value", -date) %>%
   mutate(variable = gsub("X","",variable))
 
+# land-ocean boundaries
+ne_ocean = st_read(paste0(path_originaldata,
+                         "/orig/naturalearthdata/ne_50m_ocean.shp")) %>%
+  st_as_sf() %>%
+  st_transform(crs = "+proj=robin")
+
 # use 30 degree graticule for map overlay
 grat_poly = st_read(paste0(path_originaldata,
                          "/orig/naturalearthdata/ne_50m_graticules_30.shp")) %>%
@@ -159,11 +164,6 @@ grat_poly = st_read(paste0(path_originaldata,
 # 60 degree version for small map plots
 grat_poly_60s <- filter(grat_poly, degrees %in% seq(from = 0,to = 180, by = 60))
 
-# land-ocean boundaries
-ne_ocean = st_read(paste0(path_originaldata,
-                         "/orig/naturalearthdata/ne_50m_ocean.shp")) %>%
-  st_as_sf() %>%
-  st_transform(crs = "+proj=robin")
 
 # biome values, names and assigned colors
 biome_names <-
