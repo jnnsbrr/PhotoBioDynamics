@@ -39,7 +39,8 @@ modelRunner = function(path_output = NULL,
                       format = c("GLOBAL_TS", "BIOME_TS","GRID"),
                       paramfile = NULL) {
 
-
+  cat("Reading input data... \n")
+  
   path_data = rappdirs::user_data_dir("PhotoBioDynamics") %>%
     gsub("\\\\", "/", .)
 
@@ -78,6 +79,8 @@ modelRunner = function(path_output = NULL,
   co2 = co2_tab$interpolated
   ## run model in parallel
 
+  cat("Completed. Start simulation... \n")
+  
   # providing a parallel backend cluster for parallelisation
   cl = parallel::makeCluster(2,outfile = "")
   doParallel::registerDoParallel(cl)
@@ -102,6 +105,8 @@ modelRunner = function(path_output = NULL,
   # close cluster
   parallel::stopCluster(cl)
   
+  cat("Completed simulation. Start post processing... \n")
+  
   if (length(dim(pp)) == 3) {
     pp = array(pp, c(dim(pp),1))
   }
@@ -109,7 +114,9 @@ modelRunner = function(path_output = NULL,
 
   # write as gridded output
   if ("GRID" %in% format) {
-
+    
+    cat("Save as gridded data. \n")
+    
     for (cc in 1:dim(pp)[4]) {
 
       # recycle temp_ras brick
@@ -124,7 +131,9 @@ modelRunner = function(path_output = NULL,
 
   # write as global time series
   if ("GLOBAL_TS" %in% format) {
-
+    
+    cat("Save as global time series. \n")
+    
     # calculate area of grid cells using raster package functionality
     pp_area = raster::area(x = temp_ras) %>%
       raster::as.array(.) %>%
@@ -150,6 +159,8 @@ modelRunner = function(path_output = NULL,
   # write as global time series for each biome
   if ("BIOME_TS" %in% format){
 
+    cat("Save as time series for each biome. \n")
+    
     # check if pp_area is already defined, then recycle
     if(!exists("pp_area")) {
 
@@ -237,4 +248,6 @@ modelRunner = function(path_output = NULL,
     saveRDS(object=biome_ts, file=paste0(path_output,"/biomeTS_",paste(
       outvar,collapse = "-"),".Rds"))
   }
+  cat("Completed. \n")
+  
 }

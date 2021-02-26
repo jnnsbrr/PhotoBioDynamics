@@ -8,7 +8,7 @@ xmin=-180
 ymin=-90
 xmax=180
 ymax=90
-projection=NA
+projection="+init=epsg:4326"
 [data]
 datatype=FLT4S
 byteorder=little

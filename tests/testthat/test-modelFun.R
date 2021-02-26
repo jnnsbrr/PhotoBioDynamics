@@ -1,11 +1,15 @@
 # test modelFun
 test_that(".modelFun", {
 
-  temp = readRDS(file="../testdata/temp_ras.Rds")
-  fpar = readRDS(file="../testdata/fpar_ras.Rds")
-  lai = readRDS(file="../testdata/lai_ras.Rds")
-  par = readRDS(file="../testdata/par_ras.Rds")
-  co2 = readRDS(file="../testdata/CO2_tab.Rds")
+  temp = readRDS(file="../testdata/temp_ras.Rds") %>% 
+    raster::as.array(.)
+  fpar = readRDS(file="../testdata/fpar_ras.Rds") %>% 
+    raster::as.array(.)
+  lai = readRDS(file="../testdata/lai_ras.Rds") %>% 
+    raster::as.array(.)
+  par = readRDS(file="../testdata/par_ras.Rds") %>% 
+    raster::as.array(.)
+  co2 = readRDS(file="../testdata/CO2_tab.Rds")$interpolated
   
   test_gpp = .modelPrimaryProduction(outvar ="GPP",
                                      i = 1,

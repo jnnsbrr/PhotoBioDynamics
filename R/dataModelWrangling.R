@@ -5,7 +5,7 @@
 # download and process global temperature data ####
 .getTemperatureData = function(years, path.originaldata, 
                                path.inputdata = NULL) {
-  cat("Downloading temperature data ...")
+  cat("Downloading temperature data ... \n")
   
   url_temp = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.GHCN_CAMS/.gridded/.deg0p5/data.nc"
   download.file(url = url_temp,
