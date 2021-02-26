@@ -52,13 +52,13 @@
   timestart <- strsplit(timedef[4], ":")[[1]]
   if (length(timestart) != 3 || timestart[1] > 24 || 
       timestart[2] > 60 || timestart[3] > 60 || any(timestart < 0)) {
-    warning(paste("Warning:", timestart, 
-                  "not a valid start time. Assuming 00:00:00\n"))
+    # warning(paste("Warning:", timestart, 
+    #               "not a valid start time. Assuming 00:00:00\n"))
     timedef[4] <- "00:00:00"
   }
   if (! tz %in% OlsonNames()) {
-    warning(paste("Warning:", timestart, 
-                  "not a valid start time. Assuming 00:00:00\n"))
+    #warning(paste("Warning:", timestart, 
+    #              "not a valid start time. Assuming 00:00:00\n"))
     tz <- "UTC"
   }
 

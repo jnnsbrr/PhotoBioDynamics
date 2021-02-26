@@ -1,10 +1,12 @@
 # test download and processing input files functions
 
-ping_url <- function(url_in,t=1){
+ping_url <- function(url_in, t=1){
   con <- url(url_in)
-  check <- suppressWarnings(try(open.connection(con,open="rt",timeout=t),silent=T)[1])
-  suppressWarnings(try(close.connection(con),silent=T))
-  ifelse(is.null(check),TRUE,FALSE)
+  check <- suppressWarnings(
+    try(open.connection(con,open="rt",timeout=t),silent=TRUE)[1])
+  suppressWarnings(
+    try(close.connection(con),silent=T))
+  ifelse(is.null(check), TRUE, FALSE)
 }
 
 

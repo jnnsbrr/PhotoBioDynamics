@@ -72,6 +72,8 @@ new_scale <- function(new_aes) {
   structure(ggplot2::standardise_aes_names(new_aes), class = "new_aes")
 }
 
+static_path = system.file("data",mapping="static", package="PhotoBioDynamics")
+
 ```
 
 ## Data read and prep
@@ -206,8 +208,7 @@ biome_labels <- setNames(as.character(biome_names$NAME), biome_names$BIOME)
 
 
 # get biome shapefile and assign biomes info
-biomes = sf::st_read(here::here("data", "static",
-                                "14_biomes_poly.shp")) %>%
+biomes = sf::st_read(paste(static_path,"14_biomes_poly.shp",sep = "/")) %>%
   st_as_sf() %>%
   `st_crs<-`("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0") %>%
   sf::st_transform(crs = "+proj=robin") %>%
@@ -521,21 +522,19 @@ GPP_biome_ts <-
 ```{r plot, fig.width = 16, fig.height = 20}
 
 cowplot::ggdraw(GPP_biomes) +
-  draw_image(image = here::here("data", "static",
-                                "snowflake.svg"),
+  draw_image(image = paste(static_path, "snowflake.svg",sep = "/"),
              hjust=-1.7, vjust = -26.3, width = 0.03, height = 0.03) +
   draw_plot(GPP_annual + GPP_winter + labs(title = "NH Winter"), hjust=-0.16,
             vjust = -2, width = 0.3, height = 0.3) +
-  draw_image(image = here::here("data", "static", "flower.svg"),
+  draw_image(image = paste(static_path, "flower.svg",sep = "/"),
              hjust=-7.2, vjust = -31.05, width = 0.03, height = 0.03) +
   draw_plot(GPP_annual + GPP_spring + labs(title = "NH Spring"), hjust=-0.675,
             vjust = -2.46, width = 0.3, height = 0.3) +
-  draw_image(image = here::here("data", "static", "sun.svg"),
+  draw_image(image = paste(static_path, "sun.svg",sep = "/"),
              hjust=-25.5, vjust = -31.05, width = 0.03, height = 0.03) +
   draw_plot(GPP_annual + GPP_summer + labs(title = "NH Summer"), hjust=-1.67,
             vjust = -2.46, width = 0.3, height = 0.3) +
-  draw_image(image = here::here("data", "static",
-                                "falling-leaves.svg"),
+  draw_image(image = paste(static_path, "falling-leaves.svg",sep = "/"),
              hjust=-23, vjust = -19.6, width = 0.04, height = 0.04) +
   draw_plot(GPP_annual + GPP_fall + labs(title = "NH Fall"), hjust = -2.19,
             vjust = -2, width = 0.3, height = 0.3) +

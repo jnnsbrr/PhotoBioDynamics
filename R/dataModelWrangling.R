@@ -2,103 +2,18 @@
 # download and process model input of required format and boundaries (time)
 # ---------------------------------------------------------------------------- #
 
-# download and process global radiation data ####
-.downloadIrradianceNCs = function(ff, url, nodes, path.originaldata) {
-  
-  page = xml2::read_html(paste0(url, nodes[ff]))
-  
-  data_nodes = page %>% 
-    rvest::html_nodes("td a") %>% 
-    .[rvest::html_text(.) == "file"] %>% 
-    rvest::html_attr("href")
-  
-  if (!dir.exists(paste0(path.originaldata, "/orig/irradiance"))) {
-    dir.create(paste0(path.originaldata, "/orig/irradiance"))
-  }
-  
-  y_suburl = sub("contents.html","",nodes[ff])
-    sapply(data_nodes, function(x) {
-      download.file(url = paste0(url, 
-                                 y_suburl,
-                                 x),
-                    destfile = paste0(path.originaldata,
-                                      "/orig/irradiance/",
-                                      sub(pattern = "srb_rel3.0_lpsa_monthly",
-                                          replacement = "irradiance_sw", 
-                                          x = x)),
-                    mode ="wb")}) %>% 
-      invisible()
-}
-
-
-# download and process global FPAR and LAI data ####
-.downloadFPARLAINCs = function(yy, years, co2_tab, path.originaldata) {
-  
-  url_catalog = "https://icdc.cen.uni-hamburg.de/thredds/catalog/ftpthredds/modis_lai_fpar/global/"
-  url_download = "https://icdc.cen.uni-hamburg.de/thredds/fileServer/ftpthredds/modis_lai_fpar/global/"
-  
-  # web scraping
-  page = xml2::read_html(paste0(url_catalog,
-                                years[yy],
-                                "/catalog.html"))
-  # find data nodes
-  data_nodes = page %>% 
-    rvest::html_nodes("td a") %>%
-    rvest::html_attr("href")
-  
-  # estimate and convert required timespan
-  date_format = "([2-9][0-9]{7})"
-  dates_raw = str_extract(data_nodes,date_format) %>% 
-    lubridate::ymd()
-  
-  
-  dates_int = sapply(X = co2_tab$date[lubridate::year(co2_tab$date) == years[yy]], 
-                     FUN = function(x){y = dates_raw[which(abs(
-                       dates_raw-x) == min(abs(
-                         dates_raw - x), na.rm = TRUE))] %>%  
-                       ifelse(length(.) > 1,.[1], .)})  
-  
-  dates_to_extract = dates_int %>% 
-    as.Date(origin = "1970-01-01") %>% 
-    format(format = "%Y%m%d")
-  
-  if (!dir.exists(paste0(path.originaldata, "/orig/fpar_lai"))) {
-    dir.create(paste0(path.originaldata, "/orig/fpar_lai"))
-  }
-  
-  
-  # download required files for time vectors (within one year)
-  lapply(X = dates_to_extract,
-         FUN = function(x) download.file(url = paste0(
-          url_download,
-          years[yy],
-          "/MODIS-C006_MOD15A2__LAI_FPAR__LPDAAC__GLOBAL_0.5degree__UHAM-ICDC__",
-          x,
-          "__fv0.02.nc"), 
-         destfile = paste0(path.originaldata, 
-                           "/orig/fpar_lai/MODIS_LAI_FPAR_",
-                           x,
-                           ".nc"),
-         mode = "wb")
-  ) %>% 
-    invisible()
-  
-  # get dates 
-  return(dates_to_extract)
-  
-}
-
-
 # download and process global temperature data ####
 .getTemperatureData = function(years, path.originaldata, 
-                               path.inputdata = "./data/input/") {
+                               path.inputdata = NULL) {
+  cat("Downloading temperature data ...")
   
   url_temp = "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.GHCN_CAMS/.gridded/.deg0p5/data.nc"
   download.file(url = url_temp,
                 destfile = paste0(path.originaldata, "/orig/air.mon.mean2.nc"),
-                mode="wb") %>% 
-    invisible()
-  temp = .read.ncdf(paste0(path.originaldata, "/orig/"),"air.mon.mean2.nc")
+                mode="wb", quiet = TRUE)
+  cat("Completed. Now wrangling data ... \n")
+  
+  temp = .read.ncdf(paste0(paste0(path.originaldata, "/orig/")),"air.mon.mean2.nc")
   
   # read and assign time metadata
   time_dim = .get.ncdf.dimnames(paste0(path.originaldata,"/orig/"),
@@ -117,17 +32,20 @@
     raster::brick(., nl = dim(temp)[3]) %>% 
     raster::setValues(., values = temp)
   
-  if (!dir.exists(path.inputdata)) {
-    dir.create(path = path.inputdata, recursive = TRUE)
+  if (is.null(path.inputdata)) {
+    saveRDS(object = temp_ras, file = paste0(path.originaldata, "/input/", 
+                                         "temp_ras.Rds"))
+  } else {
+    saveRDS(object = temp_ras, file = paste0(path.inputdata, "temp_ras.Rds"))
   }
-  saveRDS(object=temp_ras, file=paste0(path.inputdata, "temp_ras.Rds"))
+  cat("Completed. \n")
+  
 }
-
 
 # download and process CO2 data from Mauna Loa (good representativity) ####
 .getCO2Data = function(years, path.originaldata, 
-                       path.inputdata = "./data/input/") {
-  
+                       path.inputdata = NULL) {
+  cat("Downloading and wrangling CO2 data ... \n")
   url_co2 = 'ftp://aftp.cmdl.noaa.gov/products/trends/co2/co2_mm_mlo.txt'
   co2_dat = read.table(file = url_co2,
                        na.strings = -99.99)
@@ -144,43 +62,89 @@
                        trend = co2_dat$trend) %>% 
     dplyr::filter(year >= min(years) & year <= max(years))
   
-  if (!dir.exists(path.inputdata)) {
-    dir.create(path = path.inputdata, recursive = TRUE)
+  
+  if (is.null(path.inputdata)) {
+    saveRDS(object=co2_tab, file = paste0(path.originaldata, "/input/", 
+                                         "CO2_tab.Rds"))
+  } else {
+    saveRDS(object=co2_tab, file = paste0(path.inputdata, "CO2_tab.Rds"))
   }
-
-  saveRDS(object=co2_tab, file = paste0(path.inputdata, "CO2_tab.Rds"))
+  cat("Completed. \n")
 }
 
 
 # download and process Leaf Area Index (LAI) & Fraction of Absorbed PAR (FPAR) ####
-.getLAIFPARData = function(years, cluster, path.originaldata, 
-                           path.inputdata = "./data/input/") {
+.getLAIFPARData = function(years, path.originaldata, path.inputdata = NULL) {
   
-  if (file.exists("./data/input/CO2_tab.Rds")) {
-    co2_tab = readRDS(file = "./data/input/CO2_tab.Rds")
+  if (file.exists(paste0(path.originaldata, "/input/CO2_tab.Rds"))) {
+    co2_tab = readRDS(file = paste0(path.originaldata, "/input/CO2_tab.Rds"))
 
   } else {
     stop("Please run PhotoBioDynamics::.wranglingCO2Data() first.")
   }
-
-  # parallel foreach with multidim array returning
-  dates_to_extract = foreach::foreach(yy = 1:length(years),
-                                      .combine='c',
-                                      .packages = c("tidyverse"),
-                                      .export=c(# "dates_to_extract", "years",
-                                        # "co2_tab", "path.originaldata",
-                                        ".downloadFPARLAINCs")
-  ) %dopar% {
-    
-    .downloadFPARLAINCs(yy = yy,
-                        years = years,
-                        co2_tab = co2_tab,
-                        path.originaldata = path.originaldata)
+  
+  if (!dir.exists(paste0(path.originaldata, "/orig/fpar_lai"))) {
+    dir.create(paste0(path.originaldata, "/orig/fpar_lai"))
   }
   
+  url_catalog = "https://icdc.cen.uni-hamburg.de/thredds/catalog/ftpthredds/modis_lai_fpar/global/"
+  url_download = "https://icdc.cen.uni-hamburg.de/thredds/fileServer/ftpthredds/modis_lai_fpar/global/"
+
+  # estimate and convert required timespan
+  date_format = "([2-9][0-9]{7})"
+  
+  dates_to_extract = lapply(years, function(x) {
+    page = xml2::read_html(paste0(url_catalog, x, "/catalog.html"))
+
+    data_nodes = page %>% 
+      rvest::html_nodes("td a") %>%
+      rvest::html_attr("href")
+    dates_raw = stringr::str_extract(data_nodes,date_format) %>% 
+      lubridate::ymd()
+    
+    dates_int = sapply(co2_tab$date[lubridate::year(co2_tab$date) == x], 
+                       FUN = function(xx){y = dates_raw[which(abs(
+                         dates_raw-xx) == min(abs(
+                           dates_raw - xx), na.rm = TRUE))] %>%  
+                         ifelse(length(.) > 1,.[1], .)})
+    dates_to_download = dates_int %>% 
+      as.Date(origin = "1970-01-01") %>% 
+      format(format = "%Y%m%d")
+    
+    data.frame(year=rep(x,length(dates_to_download)),suburl=dates_to_download)
+  }) %>% dplyr::bind_rows()
+  
+
+  
+  cat("Downloading LAI and FPAR data ... \n")
+  
+  # detect cores for parallel backend
+  cores = parallel::detectCores()-1 # one core to be left
+  
+  # start cluster backend for parallelization
+  cl = parallel::makeCluster(cores, outfile = "")
+  doParallel::registerDoParallel(cl)
   
   # parallel foreach with multidim array returning
-  lai_ts = foreach::foreach(y = 1:length(dates_to_extract), 
+  foreach::foreach(yy = 1:nrow(dates_to_extract)) %dopar% {
+    
+    download.file(url = paste0(
+      url_download,
+      dates_to_extract$year[yy],
+      "/MODIS-C006_MOD15A2__LAI_FPAR__LPDAAC__GLOBAL_0.5degree__UHAM-ICDC__",
+      dates_to_extract$suburl[yy],
+      "__fv0.02.nc"), 
+      destfile = paste0(path.originaldata, 
+                        "/orig/fpar_lai/MODIS_LAI_FPAR_",
+                        dates_to_extract$suburl[yy],
+                        ".nc"),
+      mode = "wb", quiet = TRUE)
+  }
+  
+  cat("Completed. Wrangling LAI data ... \n")
+  
+  # parallel foreach with multidim array returning
+  lai_ts = foreach::foreach(y = 1:nrow(dates_to_extract), 
                             .combine = '.acomb', 
                             .multicombine = TRUE,
                             .export=c(".combineNCData")
@@ -190,7 +154,7 @@
                    fn_const = "MODIS_LAI_FPAR_",
                    y = y,
                    var = "lai",
-                   dates = dates_to_extract)
+                   dates = dates_to_extract$suburl)
   }
   
   lai_ts = aperm(lai_ts, c(2,1,3)) %>% 
@@ -205,11 +169,17 @@
     raster::stackApply(., indices = rep(1:12,times = raster::nlayers(.)/12),
                fun = mean,na.rm = TRUE)
   
-  saveRDS(object=lai_ras, file=paste0(path.inputdata,"lai_ras.Rds"))
+  if (is.null(path.inputdata)) {
+    saveRDS(object=lai_ras, file=paste0(path.originaldata, "/input/", 
+                                         "lai_ras.Rds"))
+  } else {
+    saveRDS(object=lai_ras, file=paste0(path.inputdata,"lai_ras.Rds"))
+  }
   
+  cat("Completed. Wrangling FPAR data ...\n")
   
   # parallel foreach with multidim array returning
-  fpar_ts = foreach::foreach(y = 1:length(dates_to_extract), 
+  fpar_ts = foreach::foreach(y = 1:nrow(dates_to_extract), 
                              .combine = '.acomb', 
                              .multicombine = TRUE,
                              .export=c(# "dates_to_extract, path.originaldata",
@@ -220,9 +190,11 @@
                    fn_const = "MODIS_LAI_FPAR_",
                    y = y,
                    var = "fpar",
-                   dates = dates_to_extract)
+                   dates = dates_to_extract$suburl)
   }
   
+  # close parallel cluster backend
+  parallel::stopCluster(cl)
   
   fpar_ts = aperm(fpar_ts, c(2,1,3))
   fpar_ts[360:1,,] = fpar_ts
@@ -234,18 +206,25 @@
     raster::stackApply(., indices = rep(1:12,times = raster::nlayers(.)/12), 
                        fun = mean, na.rm = TRUE)
   
-  if (!dir.exists(path.inputdata)) {
-    dir.create(path = path.inputdata, recursive = TRUE)
+  if (is.null(path.inputdata)) {
+    saveRDS(object = fpar_ras, file = paste0(path.originaldata, "/input/", 
+                                         "fpar_ras.Rds"))
+  } else {
+    saveRDS(object = fpar_ras, file = paste0(path.inputdata, "fpar_ras.Rds"))
   }
-  
-  saveRDS(object=fpar_ras, file=paste0(path.inputdata, "fpar_ras.Rds"))
+  cat("Completed.\n")
   
 }
 
 
 # download and process Photosynthetic Active Radiation (PAR) ####
-.getPARData = function(paryears, path.originaldata, cluster,
-                       path.inputdata = "./data/input/") {
+.getPARData = function(paryears, path.originaldata, path.inputdata = NULL) {
+  
+  cat("Download irradiance data ...\n")
+  
+  if (!dir.exists(paste0(path.originaldata, "/orig/irradiance"))) {
+    dir.create(paste0(path.originaldata, "/orig/irradiance"))
+  }
   
   par_url = "https://opendap.larc.nasa.gov/opendap/SRB/LPSA/SRB_REL3.0_LPSA_MONTHLY_NC/rel3.0/"
   page = xml2::read_html(paste0(par_url, "contents.html"))
@@ -259,26 +238,38 @@
   par_years_nodes = stringr::str_extract(data_nodes,date_format) %>% 
     as.integer() %>% 
     match(paryears,.)
-  
   nodes_use = data_nodes[par_years_nodes]
   
+  nodes = lapply(nodes_use, function(x) {
+    page = xml2::read_html(paste0(par_url, x))
+    suburl = sub("contents.html","",x)
+    data_nodes = page %>% 
+      rvest::html_nodes("td a") %>% 
+      .[rvest::html_text(.) == "file"] %>% 
+      rvest::html_attr("href")
+    data.frame(year=rep(suburl,length(data_nodes)),suburl=data_nodes)
+    }) %>% dplyr::bind_rows()
+  
+  # detect cores for parallel backend
+  cores = parallel::detectCores() - 1# one core to be left
+  
+  # start cluster backend for parallelization
+  cl = parallel::makeCluster(cores, outfile = "")
+  doParallel::registerDoParallel(cl)
   
   # parallel foreach with multidim array returning
-  foreach::foreach(ff = 1:length(nodes_use),
-                   .packages = "tidyverse",
-                   .export=c(# "par_url", "nodes_use", "path.originaldata",
-                     ".downloadIrradianceNCs")
-  ) %dopar% {
-    
-    # model call
-    .downloadIrradianceNCs(ff = ff,
-                           url = par_url,
-                           nodes = nodes_use,
-                           path.originaldata = path.originaldata)
+  foreach::foreach(ff = 1:nrow(nodes)) %dopar% {
+
+    download.file(url = paste0(par_url, nodes$year[ff],"/", nodes$suburl[ff]),
+                  destfile = paste0(path.originaldata,
+                                    "/orig/irradiance/",
+                                    sub(pattern = "srb_rel3.0_lpsa_monthly",
+                                        replacement = "irradiance_sw", 
+                                        x = nodes$suburl[ff])),
+                  mode ="wb", quiet = TRUE)
   }
-  
-  
-  dates_to_extract = sub("/contents.html","",nodes_use) %>%
+
+  dates_to_extract = sub("/contents.html","", nodes_use) %>%
     outer(X = ., Y = c("01", "02", "03", "04", "05", "06", "07", "08", "09", 
                        10:12), 
           FUN=paste0) %>% 
@@ -301,13 +292,16 @@
                    dates = dates_to_extract)
   }
   
+  # close parallel cluster backend
+  parallel::stopCluster(cl)
+  
   # calculate photosynthetic active radiation
   par_ts <- (0.5/0.27)*(par_ts*0.0864) %>% # /24/60/60*10^6*0.22 # to par mol/m^2/day from W/m^2/day
     aperm(.,c(2,1,3)) %>% 
     .[180:1,c(181:360,1:180),]
   
-  if (file.exists("./data/input/lai_ras.Rds")) {
-    lai_ras =   readRDS(file = "./data/input/lai_ras.Rds")
+  if (file.exists(paste0(path.originaldata, "/input/lai_ras.Rds"))) {
+    lai_ras = readRDS(file = paste0(path.originaldata, "/input/lai_ras.Rds"))
     
   } else {
     stop("Please run photodynamics::.wranglingLAIFPARData() first.")
@@ -322,11 +316,14 @@
                na.rm = TRUE) %>% 
     mask(., mask = lai_ras[[1]])
   
-  if (!dir.exists(path.inputdata)) {
-    dir.create(path = path.inputdata, recursive = TRUE)
+  if (is.null(path.inputdata)) {
+    saveRDS(object = par_ras, file = paste0(path.originaldata, "/input/", 
+                                             "par_ras.Rds"))
+  } else {
+    saveRDS(object=par_ras, file=paste0(path.inputdata, "par_ras.Rds"))
   }
+  cat("Completed. \n")
   
-  saveRDS(object=par_ras, file=paste0(path.inputdata,"par_ras.Rds"))
 }
 
 
@@ -335,17 +332,19 @@
 #' Download and process required input data that is open access and currently
 #' (year 2020) available. 
 #' This may take a while, depending on your connection.
-#' Processed model input data is stored at "./data/input
 #'
-#' @param year integer. Define a reference year for recycled data (fpar/lai)
-#'    end for the time series of outputs to be written. 
+#' @param latestyear integer. Define the latest year for the input data. 
+#'    LAI/FPAR and PAR are averaged and recycled since their long-term variations 
+#'    play a minor role within this scope. 
+#'    
+#' @param timerange integer. Define the timerange to be used for Temperature and
+#'    CO2 data. Defaults to `30`
 #' 
 #' @param delete.originaldata logical. Delete the original/raw data that could
 #'    likely comprises a large amount of memory. Defaults to `TRUE`
 #'
-#' @return None. Optional raw output is written to 
-#'    `rappdirs::user_data_dir("PhotoBioDynamics")`, processed model input into
-#'    "./data/input".
+#' @return None. Output is written to 
+#'    `rappdirs::user_data_dir("PhotoBioDynamics")`
 #'
 #' @examples \dontrun{
 #'
@@ -355,48 +354,36 @@
 #' @export
 #' 
 
-getInputData = function(year, delete.originaldata = TRUE){
+getInputData = function(latestyear, timerange=30, delete.originaldata = TRUE){
 
-
+  options(warn=2)
   # calc specific ranges for each dataset 
-  time_range = (year-29):year
-  fpar_lai_years = (year-4):year
-  par_years = 1984:2007
-
+  time_range = (latestyear-timerange+1):latestyear
+  latestyear = latestyear
+  fpar_lai_years = latestyear
+  # fpar_lai_years = (latestyear-4):latestyear # 5 year average - too slow
+  par_years = c(2002) # median year of last sunspot cycle 
+  # par_years = 1996:2007 # averaging sunspot cycle- too slow
   path_originaldata = rappdirs::user_data_dir("PhotoBioDynamics") %>% 
     gsub("\\\\", "/", .)
 
   if (!dir.exists(paste0(path_originaldata, "/orig"))) {
     dir.create(paste0(path_originaldata, "/orig"), recursive = TRUE)
   }
-  
-  # detect cores for parallel backend
-  cores = parallel::detectCores()
-  
-  # start cluster backend for parallelization
-  cl = parallel::makeCluster(cores, outfile = "")
-  doParallel::registerDoParallel(cl)
-  
+  if (!dir.exists(paste0(path_originaldata, "/input"))) {
+    dir.create(paste0(path_originaldata, "/input"), recursive = TRUE)
+  }
+
   # read and process data
-  
-  .getTemperatureData(years = time_range, 
-                            path.originaldata = path_originaldata)  
-  
-  .getCO2Data(years = time_range,
-                            path.originaldata = path_originaldata)  
-  
-  .getLAIFPARData(years = fpar_lai_years, 
-                        cluster = cl,
-                        path.originaldata = path_originaldata)  
-  
-  .getPARData(paryears = par_years, 
-                    cluster = cl, 
-                    path.originaldata = path_originaldata)  
-  
-  
-  # close parallel cluster backend
-  parallel::stopCluster(cl)
-  
+
+  .getTemperatureData(years = time_range, path.originaldata = path_originaldata)  
+
+  .getCO2Data(years = time_range, path.originaldata = path_originaldata)  
+
+  .getLAIFPARData(years = fpar_lai_years, path.originaldata = path_originaldata)  
+
+  .getPARData(paryears = par_years, path.originaldata = path_originaldata)  
+
   if(delete.originaldata) unlink(paste0(path_originaldata, "/orig"))
     
 }

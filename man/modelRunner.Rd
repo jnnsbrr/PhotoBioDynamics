@@ -5,14 +5,15 @@
 \title{A model wrapper to run different models}
 \usage{
 modelRunner(
-  path,
+  path_output = NULL,
   outvar = c("GPP", "NPP"),
   format = c("GLOBAL_TS", "BIOME_TS", "GRID"),
-  paramfile = "./data/input/model_parameters.YAML"
+  paramfile = NULL
 )
 }
 \arguments{
-\item{path}{character. define a path to write output}
+\item{path_output}{character. define a path to write output. Defaults to
+\code{rappdirs::user_data_dir("PhotoBioDynamics")}}
 
 \item{outvar}{single character or vector. Define the output variables,
 choose between gross primary production - "GPP", net primary prodcution
@@ -23,6 +24,9 @@ choose between gross primary production - "GPP", net primary prodcution
 \item{format}{single character or vector. Choose between raster time series
 for the defined \code{"outvar"} - "GRID", a global sum time series -
 "GLOBAL_TS" and/or a summed time series for each of 14 biomes ("BIOME_TS).}
+
+\item{paramfile}{string. Defaults to \code{NULL}. Provide a filepath to a parameter
+file.}
 }
 \value{
 None

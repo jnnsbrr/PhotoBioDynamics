@@ -8,6 +8,11 @@
   ## data preparation
   
   # load model parameters
+  if(is.null(paramfile)){
+    paramfile = system.file("data",mapping="input/model_parameters.YAML", 
+                            package="PhotoBioDynamics")
+    
+  }
   K = yaml::read_yaml(file=paramfile)
   
   # possibility to return multi output variables ("GPP", "NPP", "NEP")  
@@ -16,16 +21,17 @@
     j = 1
   }
   
+  
   # subset of a month
-  temp_i = temp[[i]]
-  co2_i = co2[i,]$interpolated
+  temp_i = temp[,,i]
+  co2_i = co2[i]
   
   # repeating index vector for input variables par, fpar and lai that only 
   # comprises 1 year/12 month
   idseq = rep(1:12,times=dim(temp)[3]/12)
-  par_i = par[[idseq[i]]]
-  lai_i = lai[[idseq[i]]]
-  fpar_i = fpar[[idseq[i]]]
+  par_i = par[,,idseq[i]]
+  lai_i = lai[,,idseq[i]]
+  fpar_i = fpar[,,idseq[i]]
   
   
   ## GPP PART 1: PAR-limited photosynthesis

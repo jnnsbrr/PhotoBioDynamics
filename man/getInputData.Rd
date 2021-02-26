@@ -4,25 +4,27 @@
 \alias{getInputData}
 \title{Get input data}
 \usage{
-getInputData(year, delete.originaldata = TRUE)
+getInputData(latestyear, timerange = 30, delete.originaldata = TRUE)
 }
 \arguments{
-\item{year}{integer. Define a reference year for recycled data (fpar/lai)
-end for the time series of outputs to be written.}
+\item{latestyear}{integer. Define the latest year for the input data.
+LAI/FPAR and PAR are averaged and recycled since their long-term variations
+play a minor role within this scope.}
+
+\item{timerange}{integer. Define the timerange to be used for Temperature and
+CO2 data. Defaults to \code{30}}
 
 \item{delete.originaldata}{logical. Delete the original/raw data that could
 likely comprises a large amount of memory. Defaults to \code{TRUE}}
 }
 \value{
-None. Optional raw output is written to
-\code{rappdirs::user_data_dir("PhotoBioDynamics")}, processed model input into
-"./data/input".
+None. Output is written to
+\code{rappdirs::user_data_dir("PhotoBioDynamics")}
 }
 \description{
 Download and process required input data that is open access and currently
 (year 2020) available.
 This may take a while, depending on your connection.
-Processed model input data is stored at "./data/input
 }
 \examples{
 \dontrun{
